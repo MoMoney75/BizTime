@@ -7,11 +7,13 @@ const db = require('./db')
 
 const companyRouter = require("./routes/companies")
 const invoicesRouter = require("./routes/invoices")
+const industriesRouter = require("./routes/industries")
 
 
 app.use(express.json());
 app.use("/companies", companyRouter)
 app.use('/invoices', invoicesRouter)
+app.use('/industries', industriesRouter)
 
 /** 404 handler */
 

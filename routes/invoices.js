@@ -2,6 +2,7 @@ const express = require('express')
 const db = require("../db");
 const { resourceLimits } = require('worker_threads');
 const router = express.Router() ; 
+const expressError = require('../expressError')
 
 
 router.get('/', async(request,response,next)=>{
@@ -12,7 +13,7 @@ router.get('/', async(request,response,next)=>{
     }
     
     catch(e){
-     return next(e)
+      return next(e)
     }
     })
 
@@ -38,25 +39,33 @@ router.get('/', async(request,response,next)=>{
                 return response.json({invoice : result.rows})
             }
             catch(e){
-                console.log(e)
-                return next(e)
+                    return next(e)
             }
             })
 
         router.patch('/:id', async(request, response, next)=>{
                     const {id} = request.params;
-                    const {amt} = request.body;
+                    const {amt,paid} = request.body;
             
                     const checkQuery = await db.query(`SELECT COUNT(*) FROM invoices where id = $1`, [id])
                     const rowCount = parseInt(checkQuery.rows[0].count)
         
                     if(rowCount === 0){
-                        return response.json({"error" : `invoice with id of ${id} does not exist`})
+                        return response.send(new expressError(`Invoice with id of ${id} does not exist`, 404))
                     }
-                    else{
-                        const result = await db.query(`UPDATE invoices SET amt=$1 WHERE id = $2  RETURNING *`, [amt,id])
-                        return response.json({updated : result.rows})
-                    }
+                    
+                        if(paid === true){
+                            const result = await db.query(`UPDATE invoices SET amt=$1, paid_date=CURRENT_DATE, paid = $2  WHERE id = $3  RETURNING *`, 
+                            [amt,true,id])
+                            return response.json({updated : result.rows})
+                        }
+
+                        else if(paid === false){
+                            const result = await db.query(`UPDATE invoices SET amt=$1, paid_date= null,paid = $2 WHERE id = $3  RETURNING *`, [amt,false,id])
+                            return response.json({updated : result.rows})
+                        }
+                        
+                    
                 })
 
 
@@ -77,8 +86,8 @@ router.get('/', async(request,response,next)=>{
                 
                     }
                 
-                    catch(e){
-                        return next(e)
+                    catch{
+                        return response.send(new expressError(`Invoice with id of ${id} does not exist`, 404))
                     }
                 })
 
